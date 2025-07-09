@@ -23,4 +23,7 @@
     <AdditionalFiles Include="Instructions.readme" />
     <AdditionalFiles Include="thumb.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="SEPB_Tools\Data\RefUpdater\" />
+  </ItemGroup>
 </Project>

@@ -4,12 +4,12 @@ using VRageMath;
 
 namespace IngameScript {
     public abstract class Actuator : TerminalBlockWrapper<IMyTerminalBlock>, IUpdatable {
-        protected FloatValue leftRight = new FloatValue("left_right", 0f);
-        protected FloatValue upDown = new FloatValue("up_down", 0f);
-        protected FloatValue forwardBackward = new FloatValue("forward_backward", 0f);
-        protected FloatValue yaw = new FloatValue("yaw", 0f);
-        protected FloatValue pitch = new FloatValue("pitch", 0f);
-        protected FloatValue roll = new FloatValue("roll", 0f);
+        protected DataValue<float> leftRight = new DataValue<float>("left_right", 0f, new FloatConverter());
+        protected DataValue<float> upDown = new DataValue<float>("up_down", 0f, new FloatConverter());
+        protected DataValue<float> forwardBackward = new DataValue<float>("forward_backward", 0f, new FloatConverter());
+        protected DataValue<float> yaw = new DataValue<float>("yaw", 0f, new FloatConverter());
+        protected DataValue<float> pitch = new DataValue<float>("pitch", 0f, new FloatConverter());
+        protected DataValue<float> roll = new DataValue<float>("roll", 0f, new FloatConverter());
 
         protected bool movingToTarget;
         protected float targetPosition;

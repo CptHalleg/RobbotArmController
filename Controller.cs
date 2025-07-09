@@ -3,7 +3,7 @@
 namespace IngameScript {
     public class Controller : TerminalBlockWrapper<IMyShipController>, IUpdatable {
         protected ConfigDataManager dataManager;
-        public StringValue arm = new StringValue("arm", "", saveAfterWrite: true);
+        public DataValue<string> arm = new DataValue<string>("arm", "", new StringConverter(), saveAfterWrite: true);
 
 
         public Controller(IMyShipController myShipController) : base(myShipController) {

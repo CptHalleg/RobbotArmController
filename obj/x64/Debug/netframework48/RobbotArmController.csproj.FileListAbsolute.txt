@@ -5,3 +5,4 @@ C:\Users\lukas\source\repos\RobbotArmController\RobbotArmController\obj\x64\Debu
 C:\Users\lukas\source\repos\RobbotArmController\RobbotArmController\obj\x64\Debug\netframework48\RobbotArmController.csproj.CoreCompileInputs.cache
 C:\Users\lukas\source\repos\RobbotArmController\RobbotArmController\obj\x64\Debug\netframework48\RobbotArmController.dll
 C:\Users\lukas\source\repos\RobbotArmController\RobbotArmController\obj\x64\Debug\netframework48\RobbotArmController.pdb
+C:\Users\lukas\source\repos\RobbotArmController\RobbotArmController\obj\x64\Debug\netframework48\RobbotArmController.sourcelink.json
