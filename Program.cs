@@ -72,29 +72,33 @@ namespace IngameScript {
         }
 
         private void ManageCommands(string[] arguments) {
-            if (arguments.Length == 1 && arguments[0] == "test") {
-                foreach (var arm in arms) {
-                    foreach (var actuator in arm.Value.actuators) {
-                        actuator.Test();
-                    }
+            if (arguments.Length == 3 && arguments[0] == "sequence") {
+                string armName = arguments[1];
+                if (!arms.ContainsKey(armName)) {
+                    Logger.Error($"Arm \"{armName}\" not found.");
+                    return;
                 }
+                Arm arm = arms[armName];
+                string sequenceName = arguments[2];
+                arm.ExecuteSequence(sequenceName);
+                Logger.Log($"Executing sequence \"{sequenceName}\" on arm \"{arm.Name}\".");
+
             }
         }
 
         private void Display() {
-            Logger.Display("Current Arms:");
+            string display = "";
+            display += "Current Arms:";
+
             foreach (string name in arms.Keys) {
-                Logger.Display($" - \"{arms[name].Name}\"");
-                foreach (var actuator in arms[name].actuators) {
-                    Logger.Display($"   - {actuator.Block.CustomName}");
-                }
-                Logger.Display("\n");
+                display += "\n" + arms[name].DebugString();
             }
 
-            Logger.Display("Current Controllers:");
+            display += "Current Controllers:";
             foreach (var controller in controllers) {
-                Logger.Display($" - {controller.Block.CustomName}, Arm: \"{controller.arm.Value}\"");
+                display += $"\n - {controller.Block.CustomName}, Arm: \"{controller.arm.Value}\"";
             }
+            Logger.Display(display);
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Sandbox.ModAPI.Ingame;
 using System;
+using System.Collections.Generic;
 using VRageMath;
 
 namespace IngameScript {
@@ -11,14 +12,30 @@ namespace IngameScript {
         protected DataValue<float> pitch = new DataValue<float>("pitch", 0f, new FloatConverter());
         protected DataValue<float> roll = new DataValue<float>("roll", 0f, new FloatConverter());
 
-        protected bool movingToTarget;
-        protected float targetPosition;
-        protected float targetSpeed;
+        protected DataValue<Dictionary<string, Dictionary<int, Touple<float, float>>>> sequences =
+            new DataValue<Dictionary<string, Dictionary<int, Touple<float, float>>>>("sequences", new Dictionary<string, Dictionary<int, Touple<float, float>>>(),
+                new DictionaryConverter<string, Dictionary<int, Touple<float, float>>>(
+                    new StringConverter(),
+                    new DictionaryConverter<int, Touple<float, float>>(
+                        new IntConverter(),
+                        new ToupleConverter<float, float>(
+                            new FloatConverter(),
+                            new FloatConverter(),
+                            ';'),
+                        '|',
+                        ':'),
+                    ',',
+                    '='));
+
+
+        public bool MovingToTarget { get; protected set; }
+        public float TargetPosition { get; protected set; }
+        public float TargetSpeed { get; protected set; }
 
         protected DataManager dataManager;
 
         public Actuator(IMyTerminalBlock block) : base(block) {
-            dataManager = new ConfigDataManager(block, Program.TAG, leftRight, upDown, forwardBackward, yaw, pitch, roll);
+            dataManager = new ConfigDataManager(block, Program.TAG, leftRight, upDown, forwardBackward, yaw, pitch, roll, sequences);
             dataManager.LoadAll();
         }
 
@@ -32,19 +49,31 @@ namespace IngameScript {
             }
         }
 
-        public virtual void Tick(Vector3 movement, Vector2 rotation, float roll, float multiplyer) {
+        public virtual bool Tick(Vector3 movement, Vector2 rotation, float roll, float multiplyer) {
             float velocity = 0;
-            if (movingToTarget) {
-                if (Math.Abs(GetPosition() - targetPosition) > 0.01f) {
-                    velocity = MathHelper.Clamp(MathHelper.WrapAngle(targetPosition - GetPosition()) / 0.01f, -targetSpeed, targetSpeed);
+            bool manualMovement = false;
+            if (MovingToTarget) {
+                if (Math.Abs(GetPosition() - GetTargetPositionRad()) > 0.01f) {
+                    velocity = MathHelper.Clamp(MathHelper.WrapAngle(GetTargetPositionRad() - GetPosition()) / 0.01f, -GetTargetSpeedRad(), GetTargetSpeedRad());
                 } else {
-                    movingToTarget = false;
+                    MovingToTarget = false;
                     velocity = 0;
                 }
             } else {
                 velocity = CalculateMovement(movement, rotation, roll, multiplyer);
+                if (velocity != 0) {
+                    manualMovement = true;
+                }
             }
             SetVelocity(velocity);
+            return manualMovement;
+        }
+
+        public float GetTargetPositionRad() {
+            return MathHelper.ToRadians(TargetPosition);
+        }
+        public float GetTargetSpeedRad() {
+            return MathHelper.ToRadians(TargetSpeed);
         }
 
         protected abstract void SetVelocity(float velocity);
@@ -62,10 +91,36 @@ namespace IngameScript {
             return ret;
         }
 
-        internal void Test() {
-            movingToTarget = true;
-            targetPosition = 0;
-            targetSpeed = 0.5f;
+        public void MoveTo(float targetPosition, float targetSpeed) {
+            Logger.Log($"Actuator {Block.CustomName} moving to target position {targetPosition} with speed {targetSpeed}.");
+            MovingToTarget = true;
+            this.TargetPosition = targetPosition;
+            this.TargetSpeed = targetSpeed;
+        }
+
+        public bool ExectuteSequence(string sequenceName, int step) {
+            if (!sequences.Value.ContainsKey(sequenceName)) {
+                return false;
+            }
+            Dictionary<int, Touple<float, float>> sequence = sequences.Value[sequenceName];
+            if (!sequence.ContainsKey(step)) {
+                return false;
+            }
+            Touple<float, float> data = sequence[step];
+            MoveTo(data.Item1, data.Item2);
+            return true;
+        }
+
+        public string DebugString() {
+            string result = $"   - {Block.CustomName}";
+
+            foreach (var seq in sequences.Value) {
+                result += $"\n     {seq.Key}:";
+                foreach (var prio in seq.Value) {
+                    result += $"\n          {prio.Key}: {prio.Value.Item1},{prio.Value.Item2}";
+                }
+            }
+            return result;
         }
     }
 }
