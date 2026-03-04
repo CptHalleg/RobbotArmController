@@ -8,9 +8,9 @@
     <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="SEPB_Tools\Data\RefUpdater\**" />
-    <EmbeddedResource Remove="SEPB_Tools\Data\RefUpdater\**" />
-    <None Remove="SEPB_Tools\Data\RefUpdater\**" />
+    <Compile Remove="SEPB_Tools\Config\RefUpdater\**" />
+    <EmbeddedResource Remove="SEPB_Tools\Config\RefUpdater\**" />
+    <None Remove="SEPB_Tools\Config\RefUpdater\**" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Mal.Mdk2.PbAnalyzers" Version="2.1.11">

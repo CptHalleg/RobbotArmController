@@ -3,7 +3,7 @@ using Sandbox.ModAPI.Ingame;
 
 namespace IngameScript {
     internal class RotorActuator : Actuator<IMyMotorStator> {
-        protected DataValue<bool> autolock = new DataValue<bool>("autolock", true, new BoolConverter());
+        protected ConfigValue<bool> autolock = new ConfigValue<bool>("autolock", true, new BoolConverter());
 
         public RotorActuator(IMyMotorStator block) : base(block) {
             dataManager.AddDataValue(autolock);

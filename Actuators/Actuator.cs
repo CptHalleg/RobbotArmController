@@ -5,20 +5,20 @@ using VRageMath;
 
 namespace IngameScript {
     public abstract class Actuator : TerminalBlockWrapper<IMyTerminalBlock>, IUpdatable {
-        protected DataValue<float> leftRight = new DataValue<float>("left_right", 0f, new FloatConverter());
-        protected DataValue<float> upDown = new DataValue<float>("up_down", 0f, new FloatConverter());
-        protected DataValue<float> forwardBackward = new DataValue<float>("forward_backward", 0f, new FloatConverter());
-        protected DataValue<float> yaw = new DataValue<float>("yaw", 0f, new FloatConverter());
-        protected DataValue<float> pitch = new DataValue<float>("pitch", 0f, new FloatConverter());
-        protected DataValue<float> roll = new DataValue<float>("roll", 0f, new FloatConverter());
+        protected ConfigValue<float> leftRight = new ConfigValue<float>("left_right", 0f, new FloatConverter());
+        protected ConfigValue<float> upDown = new ConfigValue<float>("up_down", 0f, new FloatConverter());
+        protected ConfigValue<float> forwardBackward = new ConfigValue<float>("forward_backward", 0f, new FloatConverter());
+        protected ConfigValue<float> yaw = new ConfigValue<float>("yaw", 0f, new FloatConverter());
+        protected ConfigValue<float> pitch = new ConfigValue<float>("pitch", 0f, new FloatConverter());
+        protected ConfigValue<float> roll = new ConfigValue<float>("roll", 0f, new FloatConverter());
 
-        protected DataValue<Dictionary<string, Dictionary<int, Touple<float, float>>>> sequences =
-            new DataValue<Dictionary<string, Dictionary<int, Touple<float, float>>>>("sequences", new Dictionary<string, Dictionary<int, Touple<float, float>>>(),
-                new DictionaryConverter<string, Dictionary<int, Touple<float, float>>>(
+        protected ConfigValue<Dictionary<string, Dictionary<int, Tuple<float, float>>>> sequences =
+            new ConfigValue<Dictionary<string, Dictionary<int, Tuple<float, float>>>>("sequences", new Dictionary<string, Dictionary<int, Tuple<float, float>>>(),
+                new DictionaryConverter<string, Dictionary<int, Tuple<float, float>>>(
                     new StringConverter(),
-                    new DictionaryConverter<int, Touple<float, float>>(
+                    new DictionaryConverter<int, Tuple<float, float>>(
                         new IntConverter(),
-                        new ToupleConverter<float, float>(
+                        new TupleConverter<float, float>(
                             new FloatConverter(),
                             new FloatConverter(),
                             ';'),
@@ -28,15 +28,19 @@ namespace IngameScript {
                     '='));
 
 
+
+
         public bool MovingToTarget { get; protected set; }
         public float TargetPosition { get; protected set; }
         public float TargetSpeed { get; protected set; }
 
-        protected DataManager dataManager;
+        protected ConfigManager dataManager;
 
         public Actuator(IMyTerminalBlock block) : base(block) {
-            dataManager = new ConfigDataManager(block, Program.TAG, leftRight, upDown, forwardBackward, yaw, pitch, roll, sequences);
+            dataManager = new ConfigManager(block, Program.TAG, leftRight, upDown, forwardBackward, yaw, pitch, roll, sequences);
             dataManager.LoadAll();
+
+
         }
 
         virtual protected void Update() {
@@ -49,7 +53,11 @@ namespace IngameScript {
             }
         }
 
-        public virtual bool Tick(Vector3 movement, Vector2 rotation, float roll, float multiplyer) {
+        protected float Angle(float opposite, float close) {
+            return (float)Math.Acos(opposite / close);
+        }
+
+        public virtual bool Tick(Vector3 movement, Vector2 rotation, float roll, float multiplyer, Vector3 distance) {
             float velocity = 0;
             bool manualMovement = false;
             if (MovingToTarget) {
@@ -92,7 +100,6 @@ namespace IngameScript {
         }
 
         public void MoveTo(float targetPosition, float targetSpeed) {
-            Logger.Log($"Actuator {Block.CustomName} moving to target position {targetPosition} with speed {targetSpeed}.");
             MovingToTarget = true;
             this.TargetPosition = targetPosition;
             this.TargetSpeed = targetSpeed;
@@ -102,17 +109,20 @@ namespace IngameScript {
             if (!sequences.Value.ContainsKey(sequenceName)) {
                 return false;
             }
-            Dictionary<int, Touple<float, float>> sequence = sequences.Value[sequenceName];
+            Dictionary<int, Tuple<float, float>> sequence = sequences.Value[sequenceName];
             if (!sequence.ContainsKey(step)) {
                 return false;
             }
-            Touple<float, float> data = sequence[step];
+            Tuple<float, float> data = sequence[step];
             MoveTo(data.Item1, data.Item2);
             return true;
         }
 
         public string DebugString() {
-            string result = $"   - {Block.CustomName}";
+            string result = $"   - {Block.CustomName} {Block.Closed}";
+            if (MovingToTarget) {
+                result += $"target: {TargetPosition}";
+            }
 
             foreach (var seq in sequences.Value) {
                 result += $"\n     {seq.Key}:";
@@ -120,6 +130,7 @@ namespace IngameScript {
                     result += $"\n          {prio.Key}: {prio.Value.Item1},{prio.Value.Item2}";
                 }
             }
+
             return result;
         }
     }

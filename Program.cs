@@ -13,33 +13,37 @@ namespace IngameScript {
 
         public static Program Singleton { get; private set; }
 
-        private UpdatableWrappedBlockHashSet<IMyShipController, Controller> controllers;
-        private UpdatableConfigDictionary<Arm> arms;
+        private SEPB sepb;
+        private BlockDictionary<IMyShipController, Controller> controllers;
+        private ConfigSectionDictionary<Arm> arms;
+        private ConfigManager configManager;
 
 
         public Program() {
-            Logger.Log("Robbot Arm Controller Initializing...");
             Singleton = this;
-            Runtime.UpdateFrequency = UPDATE_FREQUENCY;
+            sepb = new SEPB(this, UPDATE_FREQUENCY, Logic, Display, Update);
+            Logger.Log("Robbot Arm Controller Initializing...");
 
-            controllers = new UpdatableWrappedBlockHashSet<IMyShipController, Controller>(
-                GridTerminalSystem,
+            controllers = new BlockDictionary<IMyShipController, Controller>(GridTerminalSystem,
                 block => block.CustomName.Contains(TAG_BRACKETS),
-                block => new Controller(block),
-                wrapper => wrapper.Block);
+                block => new Controller(block));
 
-            arms = new UpdatableConfigDictionary<Arm>(Me,
+            arms = new ConfigSectionDictionary<Arm>(
                 section => section.StartsWith(ARM_CUSTOM_DATA_TAG),
                 section => new Arm(section.Substring(ARM_CUSTOM_DATA_TAG.Length)));
-            Updater.Init(Update);
-            Logger.Init(this);
+
+            configManager = new ConfigManager(Me, ARM_CUSTOM_DATA_TAG, arms);
+
+            Command<string> sequenceCommand = new Command<string>((x) => { }, new StringConverter());
         }
 
         private void Update(int currentStep, ref int maxSteps, ref string lastUpdateDescription) {
             controllers.Update("controllers", currentStep, ref maxSteps, ref lastUpdateDescription);
-            Updater.UpdateMultible(controllers, c => $"controller {c.Block.CustomName}", currentStep, ref maxSteps, ref lastUpdateDescription);
-            arms.Update("arms", currentStep, ref maxSteps, ref lastUpdateDescription);
-            Updater.UpdateMultible(arms.Values, a => $"arm {a.Name}", currentStep, ref maxSteps, ref lastUpdateDescription);
+            Updater.UpdateCollection(controllers.CleanedValues(), c => $"controller {c.Block.CustomName}", currentStep, ref maxSteps, ref lastUpdateDescription);
+            if (Updater.ShouldUpdate(1, "arms", currentStep, ref maxSteps, ref lastUpdateDescription)) {
+                configManager.LoadAll();
+            }
+            Updater.UpdateCollection(arms.CleanedValues(), a => $"arm {a.Name}", currentStep, ref maxSteps, ref lastUpdateDescription);
         }
 
         public void Save() {
@@ -47,42 +51,14 @@ namespace IngameScript {
         }
 
         public void Main(string argument, UpdateType updateSource) {
-            ManageCommands(argument.Split(' '));
-            if (Updater.Initialized) {
-                Tick();
-            } else {
-                Updater.Tick();
-                Logger.Tick();
-            }
-        }
-
-        public void Tick() {
-            Updater.Tick();
-            Logic();
-            Display();
-            Logger.Tick();
+            sepb.Main(argument, updateSource);
         }
 
         private void Logic() {
-            foreach (Controller controller in controllers) {
-                if (controller.arm.Value != "" && arms.Keys.Contains(ARM_CUSTOM_DATA_TAG + controller.arm.Value)) {
-                    arms[ARM_CUSTOM_DATA_TAG + controller.arm.Value].Tick(controller.Block);
+            foreach (Controller controller in controllers.CleanedValues()) {
+                if (controller.arm.Value != "" && arms.Items.Keys.Contains(ARM_CUSTOM_DATA_TAG + controller.arm.Value)) {
+                    arms.Items[ARM_CUSTOM_DATA_TAG + controller.arm.Value].Tick(controller.Block);
                 }
-            }
-        }
-
-        private void ManageCommands(string[] arguments) {
-            if (arguments.Length == 3 && arguments[0] == "sequence") {
-                string armName = arguments[1];
-                if (!arms.ContainsKey(armName)) {
-                    Logger.Error($"Arm \"{armName}\" not found.");
-                    return;
-                }
-                Arm arm = arms[armName];
-                string sequenceName = arguments[2];
-                arm.ExecuteSequence(sequenceName);
-                Logger.Log($"Executing sequence \"{sequenceName}\" on arm \"{arm.Name}\".");
-
             }
         }
 
@@ -90,13 +66,13 @@ namespace IngameScript {
             string display = "";
             display += "Current Arms:";
 
-            foreach (string name in arms.Keys) {
-                display += "\n" + arms[name].DebugString();
+            foreach (Arm arm in arms.CleanedValues()) {
+                display += $"\n{arm.DebugString()}";
             }
 
-            display += "Current Controllers:";
-            foreach (var controller in controllers) {
-                display += $"\n - {controller.Block.CustomName}, Arm: \"{controller.arm.Value}\"";
+            display += "\nCurrent Controllers:";
+            foreach (var controller in controllers.CleanedValues()) {
+                display += $"\n{controller.DebugString()}";
             }
             Logger.Display(display);
         }
